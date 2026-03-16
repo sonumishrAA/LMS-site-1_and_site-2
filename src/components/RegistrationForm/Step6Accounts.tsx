@@ -166,7 +166,8 @@ export default function Step6Accounts({
             <label className="block text-sm font-medium text-gray-700">Full Name*</label>
             <input
               {...register('owner.name')}
-              className="mt-1 block w-full rounded-md border border-gray-200 px-3 py-2 shadow-sm focus:border-brand-500 focus:ring-brand-500"
+              disabled={!!data.owner?.isExisting}
+              className="mt-1 block w-full rounded-md border border-gray-200 px-3 py-2 shadow-sm focus:border-brand-500 focus:ring-brand-500 disabled:bg-gray-50 disabled:text-gray-500 cursor-not-allowed"
             />
             {errors.owner?.name && <p className="text-xs text-red-500 mt-1">{errors.owner.name.message}</p>}
           </div>
@@ -180,8 +181,8 @@ export default function Step6Accounts({
                   register('owner.email').onBlur(e)
                   handleEmailBlur(e)
                 }}
-                disabled={isVerified}
-                className="mt-1 block w-full rounded-md border border-gray-200 px-3 py-2 shadow-sm focus:border-brand-500 focus:ring-brand-500 disabled:bg-gray-50 disabled:text-gray-500"
+                disabled={isVerified || !!data.owner?.isExisting}
+                className="mt-1 block w-full rounded-md border border-gray-200 px-3 py-2 shadow-sm focus:border-brand-500 focus:ring-brand-500 disabled:bg-gray-50 disabled:text-gray-500 cursor-not-allowed"
               />
               {checkingEmail && <span className="absolute right-3 top-3 w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></span>}
             </div>
@@ -193,7 +194,8 @@ export default function Step6Accounts({
             <input
               {...register('owner.phone')}
               maxLength={10}
-              className="mt-1 block w-full rounded-md border border-gray-200 px-3 py-2 shadow-sm focus:border-brand-500 focus:ring-brand-500 font-mono"
+              disabled={!!data.owner?.isExisting}
+              className="mt-1 block w-full rounded-md border border-gray-200 px-3 py-2 shadow-sm focus:border-brand-500 focus:ring-brand-500 font-mono disabled:bg-gray-50 disabled:text-gray-500 cursor-not-allowed"
               placeholder="9876543210"
             />
             {errors.owner?.phone && <p className="text-xs text-red-500 mt-1">{errors.owner.phone.message}</p>}

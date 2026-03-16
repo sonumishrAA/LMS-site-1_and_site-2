@@ -7,6 +7,8 @@ export function verifyCrossSiteToken(token: string) {
     return jwt.verify(token, JWT_SECRET) as {
       owner_id: string
       owner_email: string
+      owner_name?: string
+      owner_phone?: string
       library_id?: string
       purpose: 'renew' | 'add-library'
     }
