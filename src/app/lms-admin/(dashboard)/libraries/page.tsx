@@ -1,12 +1,22 @@
 import React from 'react'
-import { supabaseService } from '@/lib/supabase/service'
+import { cookies } from 'next/headers'
 import LibrariesTable from '@/components/admin/LibrariesTable'
 
 export default async function LibrariesPage() {
-  const { data: libraries } = await supabaseService
-    .from('libraries')
-    .select('*')
-    .order('created_at', { ascending: false })
+  const cookieStore = await cookies()
+  const adminToken = cookieStore.get('lms_admin_token')?.value || ''
+
+  let libraries = []
+  try {
+    const base = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+    const res = await fetch(`${base}/api/admin/libraries`, {
+      headers: { Cookie: `lms_admin_token=${adminToken}` },
+      cache: 'no-store',
+    })
+    if (res.ok) libraries = await res.json()
+  } catch (e) {
+    console.error('Failed to fetch libraries:', e)
+  }
 
   return (
     <div className="space-y-8">
@@ -15,12 +25,12 @@ export default async function LibrariesPage() {
           <h1 className="text-3xl font-serif text-brand-900 mb-1">Libraries</h1>
           <p className="text-gray-500 font-medium">Manage all registered study libraries</p>
         </div>
-        <button className="bg-white border border-gray-200 text-gray-700 px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-gray-50 transition-all shadow-sm">
-          Export CSV
-        </button>
+        <div className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-600 shadow-sm">
+          Total: {libraries.length}
+        </div>
       </header>
 
-      <LibrariesTable initialData={libraries || []} />
+      <LibrariesTable initialData={libraries} />
     </div>
   )
 }
