@@ -46,25 +46,40 @@ export async function POST(req: Request) {
 
     const f = tempReg.form_data
 
-    // 4. Create real auth user for owner
-    const { data: userData, error: userError } = await supabaseService.auth.admin.createUser({
-      email: f.owner.email,
-      password: f.owner.password,
-      email_confirm: true,
-      user_metadata: { name: f.owner.name, role: 'owner' }
-    })
+    let owner_uid = ''
 
-    if (userError) {
-      console.error('User creation error:', userError)
-      // If user already exists, we might need to handle it differently
-      // but for registration flow, we assume it's a new email or handled by frontend
-      if (userError.message.includes('already registered')) {
-        return NextResponse.json({ error: 'Email already registered' }, { status: 400 })
+    if (f.owner.isExisting) {
+      // User already provided their password and verified in Step6Accounts
+      const { data: staffData, error: staffError } = await supabaseService
+        .from('staff')
+        .select('user_id')
+        .eq('email', f.owner.email)
+        .eq('role', 'owner')
+        .single()
+        
+      if (staffError || !staffData?.user_id) {
+        console.error('Failed to find existing owner user_id:', staffError)
+        return NextResponse.json({ error: 'Existing owner user not found' }, { status: 400 })
       }
-      throw userError
-    }
+      owner_uid = staffData.user_id
+    } else {
+      // 4. Create real auth user for new owner
+      const { data: userData, error: userError } = await supabaseService.auth.admin.createUser({
+        email: f.owner.email,
+        password: f.owner.password,
+        email_confirm: true,
+        user_metadata: { name: f.owner.name, role: 'owner' }
+      })
 
-    const owner_uid = userData.user.id
+      if (userError) {
+        console.error('User creation error:', userError)
+        if (userError.message.includes('already registered')) {
+          return NextResponse.json({ error: 'Email already registered' }, { status: 400 })
+        }
+        throw userError
+      }
+      owner_uid = userData.user.id
+    }
 
     // 5. Create users for staff if any
     const staff_list_processed = []
