@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -70,9 +70,8 @@ export default function Step6Accounts({
 
   const emailValue = control._formValues.owner?.email
 
-  // Check email on blur
-  const handleEmailBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
-    const email = e.target.value
+  // Check email on blur or mount for existing users
+  const checkEmailExists = async (email: string) => {
     if (!email || !email.includes('@')) return
 
     setCheckingEmail(true)
@@ -82,10 +81,10 @@ export default function Step6Accounts({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
       })
-      const data = await res.json()
+      const respData = await res.json()
       
-      if (data.exists) {
-        setExistingUser({ name: data.owner_name })
+      if (respData.exists) {
+        setExistingUser({ name: respData.owner_name })
         setIsVerified(false)
       } else {
         setExistingUser(null)
@@ -98,6 +97,17 @@ export default function Step6Accounts({
     }
   }
 
+  // Handle email onBlur for manual typing
+  const handleEmailBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    checkEmailExists(e.target.value)
+  }
+
+  useEffect(() => {
+    if (data.owner?.isExisting && data.owner?.email) {
+      checkEmailExists(data.owner.email)
+    }
+  }, [data.owner?.isExisting, data.owner?.email])
+
   const handleVerify = async () => {
     if (!verifyPassword) return
     setVerifying(true)
@@ -109,13 +119,13 @@ export default function Step6Accounts({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: emailValue, password: verifyPassword })
       })
-      const data = await res.json()
+      const respData = await res.json()
 
-      if (data.verified) {
+      if (respData.verified) {
         setIsVerified(true)
         setVerifyError('')
       } else {
-        setVerifyError(data.error || 'Invalid password')
+        setVerifyError(respData.error || 'Invalid password')
       }
     } catch (err: any) {
       setVerifyError('Verification failed. Try again.')

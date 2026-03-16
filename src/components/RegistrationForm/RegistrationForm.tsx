@@ -52,6 +52,7 @@ export type RegistrationData = {
     email: string;
     phone: string;
     password?: string;
+    isExisting?: boolean;
   };
   staff_list: {
     name: string;
