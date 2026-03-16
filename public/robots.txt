@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /lms-admin/
+Disallow: /api/
+
+Sitemap: https://libraryos-lms.vercel.app/sitemap.xml
