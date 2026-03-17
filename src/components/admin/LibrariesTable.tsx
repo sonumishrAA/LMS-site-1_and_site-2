@@ -179,15 +179,20 @@ function EditModal({
   onClose: () => void
   onSave: (id: string, updates: Record<string, string>) => Promise<void>
 }) {
+  const formatForInput = (dateStr?: string) => {
+    if (!dateStr) return ''
+    return new Date(dateStr).toISOString().slice(0, 16) // yyyy-MM-ddThh:mm
+  }
+
   const [form, setForm] = useState({
     name: lib.name,
     phone: lib.phone || '',
     address: lib.address || '',
     subscription_status: lib.subscription_status,
     subscription_plan: lib.subscription_plan || '1m',
-    subscription_start: lib.subscription_start || lib.subscription_end?.slice(0, 10) || '',
-    subscription_end: lib.subscription_end || lib.expires_at?.slice(0, 10) || '',
-    delete_date: lib.delete_date || '',
+    subscription_start: formatForInput(lib.subscription_start),
+    subscription_end: formatForInput(lib.subscription_end || lib.expires_at),
+    delete_date: formatForInput(lib.delete_date),
   })
   const [saving, setSaving] = useState(false)
 
@@ -250,18 +255,18 @@ function EditModal({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Sub Start</label>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Sub Start (Date & Time)</label>
               <input
-                type="date"
+                type="datetime-local"
                 value={form.subscription_start}
                 onChange={(e) => setForm((f) => ({ ...f, subscription_start: e.target.value }))}
                 className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Sub End</label>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Sub End (Date & Time)</label>
               <input
-                type="date"
+                type="datetime-local"
                 value={form.subscription_end}
                 onChange={(e) => setForm((f) => ({ ...f, subscription_end: e.target.value }))}
                 className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20"
@@ -270,9 +275,9 @@ function EditModal({
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Data Delete Date</label>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Data Cleanup (Date & Time)</label>
             <input
-              type="date"
+              type="datetime-local"
               value={form.delete_date}
               onChange={(e) => setForm((f) => ({ ...f, delete_date: e.target.value }))}
               className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20"
