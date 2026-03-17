@@ -81,7 +81,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     }
 
     checkAuth()
-  }, [user, pathname, router, supabase])
+  }, [pathname, router, supabase])
 
   if (loading) {
     return (
