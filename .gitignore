@@ -1,1 +1,10 @@
-node_modules\n.next\n.idea\ntest_pricing.mjs\nupdate_function.sql
+node_modules
+.next
+out
+.DS_Store
+.env.local
+.env.*.local
+*.tsbuildinfo
+package-lock.json
+build/
+dist/
