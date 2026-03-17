@@ -18,7 +18,7 @@ serve(async (req) => {
       const authHeader = req.headers.get('Authorization')
       if (!authHeader) throw new Error('No authorization header')
       const token = authHeader.replace('Bearer ', '')
-      const jwtSecret = Deno.env.get('JWT_SECRET')
+      const jwtSecret = Deno.env.get('JWT_SECRET')?.trim()
       if (!jwtSecret) throw new Error('JWT secret not configured')
       const secret = new TextEncoder().encode(jwtSecret)
       const { payload } = await jwtVerify(token, secret)
