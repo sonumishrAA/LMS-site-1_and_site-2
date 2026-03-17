@@ -1,4 +1,4 @@
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://zlhivlrapbhhkyrljueg.supabase.co'
 
 export async function callEdgeFunction(
   name: string,

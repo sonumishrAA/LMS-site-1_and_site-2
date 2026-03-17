@@ -2,14 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabaseBrowser as supabase } from '@/lib/supabase/client'
 import Cookies from 'js-cookie'
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const pathname = usePathname()
-  const supabase = createClientComponentClient()
 
   useEffect(() => {
     const checkAuth = async () => {

@@ -101,7 +101,7 @@ export default function ImportPage() {
           </div>
         </div>
         <a 
-          href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/sample-csv`} 
+          href={`${process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://zlhivlrapbhhkyrljueg.supabase.co'}/functions/v1/sample-csv`} 
           className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border-2 border-brand-500 text-brand-500 font-bold text-xs hover:bg-brand-50 transition-colors active:scale-95"
         >
           Download Template.csv
