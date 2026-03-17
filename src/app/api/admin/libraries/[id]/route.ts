@@ -44,7 +44,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     await getAdminFromRequest(req)
     const { id: libId } = await params
 
-    // 1. Get owner_id and staff user_ids before deleting
+    // 1. Get owner_id and staff details before deleting
     const { data: lib } = await supabaseService
       .from('libraries')
       .select('owner_id')
@@ -53,21 +53,37 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     const { data: staffRows } = await supabaseService
       .from('staff')
-      .select('user_id')
+      .select('user_id, library_ids')
       .contains('library_ids', [libId])
 
     // 2. Delete library (cascades to students, seats, shifts, etc via DB constraints)
+    // NOTE: This will fail if payment_records or subscription_payments exist without ON DELETE CASCADE
     const { error: libError } = await supabaseService
       .from('libraries')
       .delete()
       .eq('id', libId)
 
-    if (libError) throw libError
+    if (libError) {
+      console.error('Database delete error:', libError)
+      return NextResponse.json({ error: `Database error: ${libError.message}` }, { status: 500 })
+    }
 
-    // 3. Delete staff auth users
+    // 3. Handle staff cleanup
     if (staffRows && staffRows.length > 0) {
       for (const s of staffRows) {
-        if (s.user_id) {
+        if (!s.user_id) continue
+
+        const otherLibs = (s.library_ids || []).filter((id: string) => id !== libId)
+
+        if (otherLibs.length > 0) {
+          // Staff belongs to other libraries, just remove this library ID from their list
+          await supabaseService
+            .from('staff')
+            .update({ library_ids: otherLibs })
+            .eq('user_id', s.user_id)
+        } else {
+          // Staff only belonged to this library, delete auth user
+          // The staff record itself will be deleted if ON DELETE CASCADE is set on staff.user_id
           await supabaseService.auth.admin.deleteUser(s.user_id)
         }
       }
@@ -75,7 +91,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     // 4. Delete owner auth user if they have no other libraries
     if (lib?.owner_id) {
-      // Check if owner owns any other libraries before deleting
       const { data: otherLibs } = await supabaseService
         .from('libraries')
         .select('id')
@@ -87,8 +102,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     }
 
     return NextResponse.json({ success: true })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete library error:', error)
-    return NextResponse.json({ error: 'Failed to delete library' }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Failed to delete library' }, { status: 500 })
   }
 }
