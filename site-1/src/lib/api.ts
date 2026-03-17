@@ -1,0 +1,51 @@
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+
+export async function callEdgeFunction(
+  name: string,
+  options: {
+    method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'
+    body?: any
+    headers?: Record<string, string>
+    useAdminToken?: boolean
+    queryParams?: Record<string, string>
+  } = {}
+) {
+  const { method = 'POST', body, headers = {}, useAdminToken = false, queryParams } = options
+
+  let url = `${SUPABASE_URL}/functions/v1/${name}`
+  
+  if (queryParams) {
+    const searchParams = new URLSearchParams(queryParams)
+    url += `?${searchParams.toString()}`
+  }
+  
+  const isFormData = body instanceof FormData
+  
+  const allHeaders: Record<string, string> = {
+    ...headers,
+  }
+
+  if (!isFormData) {
+    allHeaders['Content-Type'] = 'application/json'
+  }
+
+  if (useAdminToken) {
+    const token = localStorage.getItem('admin_token')
+    if (token) {
+      allHeaders['Authorization'] = `Bearer ${token}`
+    }
+  }
+
+  const res = await fetch(url, {
+    method,
+    headers: allHeaders,
+    body: isFormData ? body : (body ? JSON.stringify(body) : undefined),
+  })
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.error || 'Request failed')
+  }
+
+  return res.json()
+}
