@@ -82,7 +82,7 @@ function AddLibraryContent() {
             initialOwner={{ 
               name: payload.owner_name || payload.owner_email.split('@')[0], 
               email: payload.owner_email,
-              phone: payload.owner_phone || '0000000000',
+              phone: payload.owner_phone || '',
               isVerified: true,
               isExisting: true
             }} 
