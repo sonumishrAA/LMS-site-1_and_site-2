@@ -1,7 +1,7 @@
 'use client'
 
-import React, { useState, useMemo, useCallback } from 'react'
-import { format, differenceInDays, isPast } from 'date-fns'
+import React, { useState, useMemo, useCallback, useEffect } from 'react'
+import { format, differenceInDays, isPast, intervalToDuration } from 'date-fns'
 import {
   Search,
   ChevronDown,
@@ -25,7 +25,56 @@ import {
   LayoutGrid,
   BookOpen,
   X,
+  Clock,
+  AlertTriangle,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
+
+function Countdown({ targetDate, label, isUrgent }: { targetDate: string; label: string; isUrgent?: boolean }) {
+  const [timeLeft, setTimeLeft] = useState<string>('')
+
+  useEffect(() => {
+    const calculate = () => {
+      const now = new Date()
+      const target = new Date(targetDate)
+      
+      if (isPast(target)) {
+        setTimeLeft('EXPIRED')
+        return
+      }
+
+      const duration = intervalToDuration({ start: now, end: target })
+      const parts = []
+      if (duration.days) parts.push(`${duration.days}d`)
+      if (duration.hours) parts.push(`${duration.hours}h`)
+      if (duration.minutes) parts.push(`${duration.minutes}m`)
+      if (!duration.days && !duration.hours && (duration.minutes === 0 || !duration.minutes)) {
+        parts.push(`${duration.seconds || 0}s`)
+      }
+      
+      setTimeLeft(parts.join(' ') || '0s')
+    }
+
+    calculate()
+    const timer = setInterval(calculate, 1000)
+    return () => clearInterval(timer)
+  }, [targetDate])
+
+  return (
+    <div className={cn(
+      "flex flex-col gap-0.5 p-2.5 rounded-xl border min-w-[120px]",
+      isUrgent ? "bg-red-50 border-red-100" : "bg-gray-50 border-gray-100"
+    )}>
+      <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 leading-none">{label}</span>
+      <span className={cn(
+        "text-xs font-mono font-bold leading-tight mt-0.5",
+        isUrgent ? "text-red-600" : "text-gray-700"
+      )}>
+        {timeLeft || '...'}
+      </span>
+    </div>
+  )
+}
 
 interface StaffMember {
   id: string
@@ -318,20 +367,32 @@ function LibraryDetail({
   return (
     <div className="px-6 py-8 bg-gradient-to-b from-gray-50/80 to-white border-t border-gray-100 space-y-8">
       
-      {/* Action Buttons */}
-      <div className="flex gap-3 justify-end">
-        <button
-          onClick={() => onEdit(lib)}
-          className="flex items-center gap-2 px-5 py-2 bg-brand-500 text-white rounded-xl text-xs font-bold hover:bg-brand-600 transition-colors shadow-sm"
-        >
-          <Pencil className="w-3.5 h-3.5" /> Edit Library
-        </button>
-        <button
-          onClick={() => onDelete(lib)}
-          className="flex items-center gap-2 px-5 py-2 bg-red-50 text-red-600 border border-red-100 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors"
-        >
-          <Trash2 className="w-3.5 h-3.5" /> Delete
-        </button>
+      {/* Top Header with Actions & Countdowns */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-wrap gap-3">
+          {expiryDate && (
+            <Countdown 
+              targetDate={expiryDate} 
+              label="Subscription Expires" 
+              isUrgent={lib.subscription_status === 'expired'} 
+            />
+          )}
+          {lib.delete_date && (
+            <Countdown 
+              targetDate={lib.delete_date} 
+              label="Data Cleanup In" 
+              isUrgent 
+            />
+          )}
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={() => onEdit(lib)}
+            className="flex items-center gap-2 px-5 py-2 bg-brand-500 text-white rounded-xl text-xs font-bold hover:bg-brand-600 transition-colors shadow-sm"
+          >
+            <Pencil className="w-3.5 h-3.5" /> Edit Library
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
@@ -549,7 +610,7 @@ function LibraryDetail({
                   </div>
                   {s.user_id && (
                     <div className="flex items-center gap-1.5 mt-1">
-                      <span className="text-[10px] text-gray-400 font-mono break-all">user: {s.user_id.slice(0, 16)}…</span>
+                      <span className="text-[10px] text-gray-400 font-mono break-all text-right">user: {s.user_id.slice(0, 16)}…</span>
                     </div>
                   )}
                   <div className="mt-2 flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-50 rounded-lg border border-amber-100">
@@ -565,6 +626,30 @@ function LibraryDetail({
               <p className="text-sm font-medium">No staff members</p>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* ── Danger Zone ── */}
+      <div className="pt-6 border-t border-gray-100">
+        <div className="flex items-center gap-2 mb-4">
+          <AlertTriangle className="w-4 h-4 text-red-500" />
+          <h4 className="text-xs font-black text-red-600 uppercase tracking-[0.2em]">Danger Zone</h4>
+        </div>
+        <div className="bg-red-50/50 border border-red-100 p-6 rounded-[2rem] flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-1">
+            <h5 className="text-red-900 font-bold text-sm">Delete Entire Library Branch</h5>
+            <p className="text-xs text-red-700/70 font-medium leading-relaxed max-w-2xl">
+              This will permanently delete the library "{lib.name}", all assigned seats, lockers, 
+              staff members, students, and their transaction history. <strong>This action is irreversible.</strong>
+            </p>
+          </div>
+          <button
+            onClick={() => onDelete(lib)}
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-red-200 text-red-600 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-red-600 hover:text-white hover:border-red-600 transition-all active:scale-95 shadow-sm"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete Library
+          </button>
         </div>
       </div>
     </div>
