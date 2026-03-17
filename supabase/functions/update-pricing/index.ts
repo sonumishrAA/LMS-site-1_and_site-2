@@ -9,23 +9,8 @@ serve(async (req) => {
   }
 
   try {
-    // 1. Verify Admin Token
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) throw new Error('No authorization header')
-    
-    const token = authHeader.replace('Bearer ', '')
-    const jwtSecret = Deno.env.get('JWT_SECRET')?.trim()
-    if (!jwtSecret) throw new Error('JWT secret not configured')
-    
-    const secret = new TextEncoder().encode(jwtSecret)
-    const { payload } = await jwtVerify(token, secret)
-    if (payload.role !== 'superadmin') throw new Error('Unauthorized')
-
-    // 2. Handle GET or POST (List pricing)
-    // We allow POST as a fallback for older/cached frontend code
+    // 1. Handle GET or POST (List pricing - PUBLIC)
     if (req.method === 'GET' || req.method === 'POST') {
-      // If it's a POST, check if it's meant to be a PATCH (has body)
-      // Actually, we'll just distinguish based on whether it's a retrieve-only request.
       const { data, error } = await supabaseAdmin
         .from('pricing_config')
         .select('*')
@@ -38,8 +23,19 @@ serve(async (req) => {
       })
     }
 
-    // 3. Handle PATCH (Update pricing)
+    // 2. Handle PATCH (Update pricing - RESTRICTED)
     if (req.method === 'PATCH') {
+      // Verify Admin Token
+      const authHeader = req.headers.get('Authorization')
+      if (!authHeader) throw new Error('No authorization header')
+      
+      const token = authHeader.replace('Bearer ', '')
+      const jwtSecret = Deno.env.get('JWT_SECRET')?.trim()
+      if (!jwtSecret) throw new Error('JWT secret not configured')
+      
+      const secret = new TextEncoder().encode(jwtSecret)
+      const { payload } = await jwtVerify(token, secret)
+      if (payload.role !== 'superadmin') throw new Error('Unauthorized')
       const { plan, amount, duration_minutes } = await req.json()
       if (!plan) throw new Error('Plan is required')
 
