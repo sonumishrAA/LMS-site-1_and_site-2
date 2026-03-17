@@ -68,6 +68,7 @@ export default function LoginPage() {
               id="email"
               type="email"
               value={email}
+              onChange={(e) => setEmail(e.target.value)}
               autoComplete="username"
               className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all text-gray-900 text-sm font-medium"
               placeholder="Manager@libraryos.in"
