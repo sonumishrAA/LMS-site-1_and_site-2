@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 import { supabaseAdmin } from '../_shared/supabase.ts'
-import * as bcrypt from 'https://deno.land/x/bcrypt@v0.4.1/mod.ts'
+import bcrypt from 'npm:bcryptjs'
 import { SignJWT } from 'https://deno.land/x/jose@v4.14.4/index.ts'
 
 serve(async (req) => {
