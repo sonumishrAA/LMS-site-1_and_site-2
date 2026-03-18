@@ -27,6 +27,8 @@ export default function SelectLibraryPage() {
   const router = useRouter()
   const [libraries, setLibraries] = useState<LibraryWithStats[]>([])
   const [loading, setLoading] = useState(true)
+  const [role, setRole] = useState('staff')
+  const [loadingAction, setLoadingAction] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -85,9 +87,6 @@ export default function SelectLibraryPage() {
     }
     load()
   }, [router])
-
-  const [role, setRole] = useState('staff')
-  const [loadingAction, setLoadingAction] = useState<string | null>(null)
 
   async function selectLibrary(lib: LibraryWithStats) {
     if (lib.isExpired) {

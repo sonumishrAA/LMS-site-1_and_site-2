@@ -82,6 +82,7 @@ function RenewContent() {
   }, [libraryId, router])
 
   async function handlePay() {
+    if (!library) return;
     setPaying(true)
     try {
       // 1. Generate Token
