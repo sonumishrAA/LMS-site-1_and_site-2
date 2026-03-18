@@ -154,6 +154,17 @@ serve(async (req) => {
 
     if (rpcError) throw rpcError
 
+    // Record the payment so idempotency works later
+    await supabaseAdmin.from('subscription_payments').upsert({
+      library_id: result.library_id,
+      razorpay_order_id: razorpay_order_id,
+      razorpay_payment_id: razorpay_payment_id,
+      amount: f.amount || 0,
+      processed: true,
+      type: 'registration',
+      plan: f.plan || '1m'
+    })
+
     return new Response(
       JSON.stringify({ success: true, library_id: result.library_id }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

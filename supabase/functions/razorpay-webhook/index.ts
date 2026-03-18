@@ -193,7 +193,7 @@ serve(async (req) => {
       }
 
       // Finalize via RPC
-      const { error: rpcError } = await supabaseAdmin.rpc(
+      const { data: result, error: rpcError } = await supabaseAdmin.rpc(
         'complete_library_registration',
         {
           p_order_id:      orderId,
@@ -214,6 +214,19 @@ serve(async (req) => {
       )
 
       if (rpcError) throw rpcError
+      
+      if (result?.library_id) {
+        // Record Payment
+        await supabaseAdmin.from('subscription_payments').upsert({
+          library_id: result.library_id,
+          razorpay_order_id: orderId,
+          razorpay_payment_id: paymentId,
+          amount: f.amount || 0,
+          processed: true,
+          type: 'registration',
+          plan: f.plan || '1m'
+        })
+      }
     }
 
     if (event === 'payment.failed') {
