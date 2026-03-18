@@ -6,6 +6,7 @@ import { supabaseBrowser } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { setActiveLibrary } from '@/app/actions'
+import Cookies from 'js-cookie'
 
 interface Library {
   id: string
@@ -23,48 +24,72 @@ export default function AppHeader() {
   const router = useRouter()
 
   useEffect(() => {
+    let isMounted = true
+
     async function fetchInitialData() {
-      const { data: { session } } = await supabaseBrowser.auth.getSession()
-      const user = session?.user
-      if (!user) {
-        setLoading(false)
-        return
-      }
+      try {
+        const { data: { session } } = await supabaseBrowser.auth.getSession()
+        if (!session?.user || !isMounted) return
 
-      const { data: staff } = await supabaseBrowser
-        .from('staff')
-        .select('library_ids, name, role')
-        .eq('user_id', user.id)
-        .single()
+        const user = session.user
 
-      if (staff) {
-        setProfile({ name: staff.name, role: staff.role })
-        if (staff.library_ids) {
-          const { data: libs } = await supabaseBrowser
-            .from('libraries')
-            .select('id, name')
-            .in('id', staff.library_ids)
+        const { data: staff } = await supabaseBrowser
+          .from('staff')
+          .select('library_ids, name, role')
+          .eq('user_id', user.id)
+          .single()
 
-          if (libs) {
-            setLibraries(libs)
-            setCurrentLib(libs[0])
-            
-            // Fetch unread notifications count
-            const { count } = await supabaseBrowser
-              .from('notifications')
-              .select('*', { count: 'exact', head: true })
-              .eq('library_id', libs[0].id)
-              .eq('is_read', false)
-            
-            setUnreadCount(count || 0)
+        if (staff && isMounted) {
+          setProfile({ name: staff.name, role: staff.role })
+          if (staff.library_ids?.length) {
+            const { data: libs } = await supabaseBrowser
+              .from('libraries')
+              .select('id, name')
+              .in('id', staff.library_ids)
+
+            if (libs && isMounted) {
+              setLibraries(libs)
+              
+              // Determine current library from cookie or first in list
+              const activeLibId = Cookies.get('active_library_id')
+              const initialLib = libs.find(l => l.id === activeLibId) || libs[0]
+              setCurrentLib(initialLib)
+              
+              const { count } = await supabaseBrowser
+                .from('notifications')
+                .select('*', { count: 'exact', head: true })
+                .eq('library_id', initialLib.id)
+                .eq('is_read', false)
+              
+              setUnreadCount(count || 0)
+            }
           }
         }
+      } catch (error) {
+        console.error('Error fetching initial header data:', error)
+      } finally {
+        if (isMounted) setLoading(false)
       }
-      setLoading(false)
     }
 
     fetchInitialData()
+    return () => { isMounted = false }
   }, [])
+
+  const handleLibraryChange = (lib: Library) => {
+    if (lib.id === currentLib?.id || isPending) return
+
+    setIsDropdownOpen(false)
+    startTransition(async () => {
+      try {
+        setCurrentLib(lib)
+        await setActiveLibrary(lib.id)
+        router.refresh()
+      } catch (error) {
+        console.error('Failed to change library:', error)
+      }
+    })
+  }
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between">
@@ -76,18 +101,21 @@ export default function AppHeader() {
         />
         <div className="relative">
           <button 
+            disabled={isPending}
             onClick={() => libraries.length > 1 && setIsDropdownOpen(!isDropdownOpen)}
             className={cn(
               "flex flex-col items-start transition-all",
-              libraries.length > 1 ? "cursor-pointer active:scale-95" : "cursor-default"
+              libraries.length > 1 && !isPending ? "cursor-pointer active:scale-95" : "cursor-default opacity-80"
             )}
           >
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-none mb-1">Branch</span>
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-none mb-1">
+              {isPending ? 'Switching...' : 'Branch'}
+            </span>
             <div className="flex items-center gap-1">
               <span className="font-bold text-gray-900 text-sm truncate max-w-[140px]">
                 {loading ? 'Loading...' : (currentLib?.name || 'No Library')}
               </span>
-              {libraries.length > 1 && <ChevronDown className="w-3.5 h-3.5 text-gray-400" />}
+              {libraries.length > 1 && !isPending && <ChevronDown className="w-3.5 h-3.5 text-gray-400" />}
             </div>
           </button>
 
@@ -101,17 +129,12 @@ export default function AppHeader() {
                 {libraries.map((lib) => (
                   <button
                     key={lib.id}
-                    onClick={() => {
-                      setCurrentLib(lib)
-                      setIsDropdownOpen(false)
-                      startTransition(async () => {
-                        await setActiveLibrary(lib.id)
-                        router.refresh()
-                      })
-                    }}
+                    disabled={isPending}
+                    onClick={() => handleLibraryChange(lib)}
                     className={cn(
                       "w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-gray-50 transition-colors",
-                      currentLib?.id === lib.id ? "bg-brand-50 text-brand-700" : "text-gray-600"
+                      currentLib?.id === lib.id ? "bg-brand-50 text-brand-700" : "text-gray-600",
+                      isPending && "opacity-50 cursor-not-allowed"
                     )}
                   >
                     <Building2 className={cn("w-4 h-4", currentLib?.id === lib.id ? "text-brand-500" : "text-gray-400")} />
@@ -141,7 +164,7 @@ export default function AppHeader() {
           </div>
           <div className="w-8 h-8 rounded-full bg-gray-200 border-2 border-white shadow-sm overflow-hidden shrink-0">
             <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-gray-500 bg-gray-100 uppercase">
-              {loading ? '..' : (profile?.name.slice(0, 2) || 'OP')}
+              {loading ? '..' : (profile?.name?.slice(0, 2) || 'OP')}
             </div>
           </div>
         </div>

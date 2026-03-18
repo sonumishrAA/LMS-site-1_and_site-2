@@ -11,8 +11,15 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
 
+  // 1. Handle mounting for hydration safety
   useEffect(() => {
     setMounted(true)
+  }, [])
+
+  // 2. Handle authentication and authorization checks
+  useEffect(() => {
+    if (!mounted) return
+
     const checkAuth = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser()
@@ -24,11 +31,10 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
           if (!isPublicRoute) {
             router.push('/login')
           }
-          setLoading(false)
           return
         }
 
-        // Logged in
+        // Logged in: Check permissions and library access
         const { data: staff } = await supabase
           .from('staff')
           .select('role, library_ids')
@@ -86,9 +92,9 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     }
 
     checkAuth()
-  }, [pathname, router])
+  }, [mounted, pathname, router])
 
-  // Hydration mismatch fix: only render content after mounting
+  // Hydration mismatch fix: only render loader until mounted
   if (!mounted) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -97,6 +103,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     )
   }
 
+  // Show loader while checking auth/loading initial state
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
